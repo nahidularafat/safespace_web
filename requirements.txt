@@ -1,9 +1,11 @@
 # Web Framework
 Django
+gunicorn
 
 # Machine Learning & Data Processing
 torch
 numpy
+pandas
 scikit-learn
 joblib
 
@@ -19,5 +21,3 @@ google-genai
 # Third-party APIs & Utilities
 twilio
 python-dotenv
-
-pandas
