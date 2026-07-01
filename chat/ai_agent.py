@@ -5,7 +5,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 from .tools import query_medgemma, call_emergency
 from .config import GOOGLE_API_KEY 
-
+import pandas as pd
+import os
+from django.conf import settings
+from langchain_core.tools import tool
 @tool
 def ask_mental_health_specialist(query: str) -> str:
     """
@@ -25,15 +28,38 @@ def emergency_call_tool() -> None:
 @tool
 def find_nearby_therapists_by_location(location: str) -> str:
     """
-    Finds and returns a list of licensed therapists near the specified location.
+    Finds and returns a list of licensed therapists near the specified location from the database.
     """
-    return (
-        f"Here are some reliable mental health centers near {location}:\n\n"
-        "- Moner Bondhu (Counseling & Therapy) - +880 1776-815252\n"
-        "- Sajida Foundation - 16736 or +880 1777-771515\n"
-        "- Kaan Pete Roi - +880 1779-554391\n"
-        "- National Institute of Mental Health - +880 2-9111362"
-    )
+    try:
+        # তোমার বানানো রিয়েল ডেটাসেট রিড করা
+        doctor_db_path = os.path.join(settings.BASE_DIR, 'doctor_list.csv')
+        doctor_df = pd.read_csv(doctor_db_path).fillna('')
+        
+        # ইউজারের দেওয়া লোকেশন অনুযায়ী ডেটা ফিল্টার করা (যেমন: Dhaka বা Mirpur)
+        # (এখানে 'Primary_Affiliation' কলামটি চেম্বারের লোকেশন হিসেবে ধরা হয়েছে)
+        filtered_df = doctor_df[doctor_df['Primary_Affiliation'].str.contains(location, case=False, na=False)]
+        
+        if filtered_df.empty:
+            return (f"I couldn't find specific therapists exactly in {location} in our current database, "
+                    "but you can immediately reach out to the National Institute of Mental Health at +880 2-9111362.")
+        
+        response_text = f"Here are some excellent specialists available near {location}:\n\n"
+        
+        # সেরা ৩ জন ডাক্তারের ইনফো পাঠানো হচ্ছে
+        for index, row in filtered_df.head(3).iterrows():
+            response_text += f"- **{row['Practitioner_Name']}** ({row['Specialized_Focus']})\n"
+            response_text += f"  📍 Chamber: {row['Primary_Affiliation']}\n"
+            response_text += f"  📞 Contact: {row['Appointment_Booking_Platform']}\n\n"
+            
+        return response_text
+        
+    except Exception as e:
+        # কোনো কারণে ফাইল লোড না হলে ব্যাকআপ হিসেবে পুরনো লিস্টটি দেবে
+        return (
+            f"Here are some reliable mental health centers near {location}:\n\n"
+            "- Moner Bondhu (Counseling & Therapy) - +880 1776-815252\n"
+            "- Sajida Foundation - 16736 or +880 1777-771515"
+        )
 
 # নতুন টুল: রিসোর্স সাজেশন
 @tool

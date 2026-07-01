@@ -1,6 +1,11 @@
 # chat/views.py
 import os
-
+import json
+import joblib
+import pickle
+import numpy as np
+import torch
+import torch.nn as nn
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.forms import UserCreationForm
@@ -8,13 +13,6 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Count
-import json
-import joblib
-import torch
-import torch.nn as nn
-import pickle
-import numpy as np
-from django.shortcuts import render
 from twilio.rest import Client
 
 from safespace_web import settings
@@ -89,7 +87,6 @@ def send_message(request):
             session = ChatSession.objects.create(user=request.user, title="New Conversation")
 
         # 🌟 ChatGPT-এর মতো ডাইনামিক টাইটেল লজিক 🌟
-        # যদি সেশনের টাইটেল "New Conversation" থাকে, তাহলে AI দিয়ে টাইটেল জেনারেট করবে
         if session.title == "New Conversation" or session.messages.count() == 0:
             try:
                 title_prompt = f"Generate a short, engaging title (maximum 4 words) for a therapeutic conversation starting with this message: '{user_message}'. Return ONLY the title text, no quotes or extra text."
@@ -97,7 +94,6 @@ def send_message(request):
                 session.title = title_response.content.strip().replace('"', '')
                 session.save()
             except:
-                # কোনো কারণে AI কাজ না করলে মেসেজের প্রথম ২৫ অক্ষর টাইটেল হিসেবে সেট হবে
                 session.title = user_message[:25] + "..."
                 session.save()
 
@@ -161,15 +157,13 @@ def mood_dashboard(request):
     })
 
 # ==========================================
-# 6. Therapist Portal View (Updated with Search & Folders)
+# 6. Therapist Portal View
 # ==========================================
 @login_required
 def therapist_portal(request):
-    # শুধুমাত্র স্টাফদের জন্য অ্যাক্সেস
     if not request.user.is_staff:
         return redirect('home')
         
-    # ১. নতুন রোগীর অ্যাকাউন্ট তৈরি করার লজিক
     if request.method == "POST" and 'username' in request.POST:
         new_username = request.POST.get('username')
         new_password = request.POST.get('password')
@@ -178,47 +172,37 @@ def therapist_portal(request):
                 User.objects.create_user(username=new_username, password=new_password)
         return redirect('therapist_portal')
 
-    # ২. Twilio Proactive SMS Trigger Logic
     if request.method == "POST" and 'trigger_sms_session_id' in request.POST:
         session_id = request.POST.get('trigger_sms_session_id')
         session = get_object_or_404(ChatSession, id=session_id)
         
         try:
-            # ইমপোর্ট করা ভেরিয়েবলগুলো এখানে ব্যবহার করুন
             client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-            
             message_content = f"Hello {session.user.username}, yesterday seemed a bit tough..."
             
             client.messages.create(
                  body=message_content,
                  from_=TWILIO_FROM_NUMBER,
-                 to='+8801305281907'  # স্পেসগুলো সরিয়ে দিয়েছি
+                 to='+8801305281907'
             )
             return JsonResponse({"status": "success", "message": "Proactive SMS sent successfully!"})
         except Exception as e:
             return JsonResponse({"status": "error", "message": str(e)})
         
-    # ৩. সার্চ এবং ফোল্ডার ভিত্তিক ডেটা তৈরি করা (NEW LOGIC)
     search_query = request.GET.get('search', '')
     
-    # যদি সার্চ বক্সে কিছু লেখা থাকে, তবে সেই নামের ইউজার খুঁজবে
     if search_query:
         patients = User.objects.filter(username__icontains=search_query, is_staff=False)
     else:
-        # সার্চ না থাকলে সব সাধারণ ইউজার (রোগী) আনবে
         patients = User.objects.filter(is_staff=False)
 
     portal_data = []
     
     for patient in patients:
-        # ইউজারের সব সেশন বের করা হচ্ছে
         patient_sessions = ChatSession.objects.filter(user=patient).order_by('-created_at')
         
-        # শুধুমাত্র যাদের অন্তত একটি সেশন আছে, তাদের ডেটা পোর্টালে পাঠানো হবে
         if patient_sessions.exists():
-            # এই ইউজারের কোনো সেশনে ইমারজেন্সি টুল কল হয়েছে কিনা চেক করা
             is_critical = ChatMessage.objects.filter(session__user=patient, tool_called='emergency_call_tool').exists()
-            # ইউজারের মোট মেসেজ সংখ্যা
             msg_count = ChatMessage.objects.filter(session__user=patient, role='user').count()
             
             portal_data.append({
@@ -233,14 +217,11 @@ def therapist_portal(request):
         'search_query': search_query
     })
 
-
-
-
 # ==========================================
 # 7. Machine Learning Model for Stress Prediction
 # ==========================================
+import __main__  # 🌟 PyTorch Pickling-এর জন্য নতুন ইম্পোর্ট
 
-# ১. ফিচার লিস্টটি সবার উপরে রাখুন
 FEATURE_NAMES = [
     'anxiety_level', 'self_esteem', 'mental_health_history', 'depression', 
     'headache', 'blood_pressure', 'sleep_quality', 'breathing_problem', 
@@ -265,21 +246,32 @@ class MediumNN(nn.Module):
     def forward(self, x): 
         return self.fc(x)
 
-# গ্লোবাল ভেরিয়েবল
+# 🌟 PyTorch Pickling Fix: জ্যাঙ্গোর manage.py-এর জন্য ক্লাসটিকে __main__ নেমস্পেসে যুক্ত করা হলো 🌟
+setattr(__main__, 'MediumNN', MediumNN)
+
+# গ্লোবাল ভেরিয়েবল
 model = MediumNN()
 scaler = None
 MODEL_PATH = os.path.join(settings.BASE_DIR, 'champion_model.pth')
 SCALER_PATH = os.path.join(settings.BASE_DIR, 'framework_scaler.pkl')
 
-# লোডিং লজিক
+# লোডিং লজিক (Updated Fix with weights_only=False)
 def load_ml_components():
     global scaler
+    global model
     try:
         if os.path.exists(SCALER_PATH):
             scaler = joblib.load(SCALER_PATH)
         if os.path.exists(MODEL_PATH):
-            state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'))
-            model.load_state_dict(state_dict)
+            # weights_only=False ব্যবহার করা হয়েছে নেমস্পেস জটিলতা এড়াতে
+            state_dict = torch.load(MODEL_PATH, map_location=torch.device('cpu'), weights_only=False)
+            
+            # মডেলটি state_dict নাকি পুরো অবজেক্ট হিসেবে সেভ করা হয়েছে তা চেক করা হচ্ছে
+            if isinstance(state_dict, dict):
+                model.load_state_dict(state_dict)
+            else:
+                model = state_dict
+                
             model.eval()
     except Exception as e:
         print(f"Loading Error: {e}")
@@ -291,7 +283,6 @@ def stress_prediction_view(request):
     global scaler
     if scaler is None: load_ml_components()
 
-    # এখন FEATURE_NAMES এই ফাংশনের ভেতরে পাওয়া যাবে
     formatted_features = [{'raw': f, 'display': f.replace('_', ' ').title()} for f in FEATURE_NAMES]
 
     if request.method == 'POST':
