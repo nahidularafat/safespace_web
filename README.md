@@ -25,11 +25,7 @@ Access the exclusive therapist portal to monitor patient sessions and trigger pr
 * **Password:** demo
 ## 📂 Project Structure
 
-text<img width="1876" height="940" alt="Screenshot 2026-07-01 181021" src="https://github.com/user-attachments/assets/000f5cf8-8081-4483-a27e-112560bf351f" />
-<img width="1903" height="923" alt="Screenshot 2026-07-01 181001" src="https://github.com/user-attachments/assets/ac86c005-bba2-49ac-bf3b-78b80bef4f21" />
-<img width="1894" height="924" alt="Screenshot 2026-07-01 180936" src="https://github.com/user-attachments/assets/29c7cc5d-c1e5-45dc-a7bb-a81e14e1267a" />
-<img width="1903" height="930" alt="Screenshot 2026-07-01 180924" src="https://github.com/user-attachments/assets/9fce6730-28a1-4630-ad6a-432f48b24cd9" />
-<img width="1918" height="932" alt="Screenshot 2026-07-01 180908" src="https://github.com/user-attachments/assets/a8cde961-eed0-40d2-abf0-e9bcab0391c8" />
+
 
 ├── chat/
 │   ├── ai_agent.py        # LangGraph ReAct Agent setup and tool definitions
@@ -93,3 +89,10 @@ Training Methodology: Augmented training data with carefully tuned micro-noise i
 
 🤝 Contribution
 This project is developed as a Capstone/Thesis project. Feedback, bug reports, and pull requests are welcome!
+
+
+text<img width="1876" height="940" alt="Screenshot 2026-07-01 181021" src="https://github.com/user-attachments/assets/000f5cf8-8081-4483-a27e-112560bf351f" />
+<img width="1903" height="923" alt="Screenshot 2026-07-01 181001" src="https://github.com/user-attachments/assets/ac86c005-bba2-49ac-bf3b-78b80bef4f21" />
+<img width="1894" height="924" alt="Screenshot 2026-07-01 180936" src="https://github.com/user-attachments/assets/29c7cc5d-c1e5-45dc-a7bb-a81e14e1267a" />
+<img width="1903" height="930" alt="Screenshot 2026-07-01 180924" src="https://github.com/user-attachments/assets/9fce6730-28a1-4630-ad6a-432f48b24cd9" />
+<img width="1918" height="932" alt="Screenshot 2026-07-01 180908" src="https://github.com/user-attachments/assets/a8cde961-eed0-40d2-abf0-e9bcab0391c8" />
