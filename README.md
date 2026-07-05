@@ -47,9 +47,7 @@ Follow these steps to run the project locally:
 
 1. Clone the repository:
 
-Bash
-git clone [https://github.com/yourusername/your-repo-name.git](https://github.com/yourusername/your-repo-name.git)
-cd your-repo-name
+
 2. Create a virtual environment and activate it:
 
 Bash
